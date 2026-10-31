@@ -17,9 +17,9 @@
         "rest",
         "http,"
       ],
-      "injection-regex": "^kulala_http$",
-      "name": "kulala_http",
-      "scope": "source.kulala_http",
+      "injection-regex": "^dkarter_kulala_http$",
+      "name": "dkarter_kulala_http",
+      "scope": "source.dkarter_kulala_http",
       "title": "Kulala HTTP"
     }
   ],

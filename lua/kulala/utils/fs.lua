@@ -219,7 +219,7 @@ M.copy_dir = function(source, destination)
 end
 
 M.ensure_dir_exists = function(dir)
-  if vim.fn.isdirectory(dir) == 0 then vim.fn.mkdir(dir, "p") end
+  if vim.fn.isdirectory(dir) == 0 then vim.fn.mkdir(dir, "p", 448) end
 end
 
 -- Get plugin tmp directory
@@ -228,9 +228,10 @@ end
 M.get_plugin_tmp_dir = function()
   local cache = vim.fn.stdpath("cache")
   ---@cast cache string
-  local dir = M.join_paths(cache, "kulala")
+  local dir = M.join_paths(cache, "dkarter-kulala-v5")
 
   M.ensure_dir_exists(dir)
+  if M.os ~= "windows" then assert(vim.uv.fs_chmod(dir, 448)) end -- request caches can contain sensitive data
   return dir
 end
 
@@ -316,7 +317,8 @@ M.command_exists = function(cmd)
 end
 
 M.make_executable = function(file)
-  return M.os ~= "windows" and os.execute("chmod +x " .. file)
+  if M.os == "windows" then return end
+  return vim.uv.fs_chmod(file, 493)
 end
 
 M.command_path = function(cmd)

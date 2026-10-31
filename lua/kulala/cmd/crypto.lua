@@ -1,6 +1,5 @@
 ---@diagnostic disable: undefined-field
 local Config = require("kulala.config")
-local Fs = require("kulala.utils.fs")
 local Json = require("kulala.utils.json")
 local Logger = require("kulala.logger")
 
@@ -24,23 +23,24 @@ local function openssl_path()
   return Config.get().openssl_path or "openssl"
 end
 
+local function openssl(args, stdin)
+  local cmd = vim.list_extend({ openssl_path() }, args)
+  local ok, result = pcall(function()
+    return vim.system(cmd, { stdin = stdin }):wait()
+  end)
+  if not ok or result.code ~= 0 then
+    -- Do not log arguments or input: these can contain signing material.
+    Logger.error("OpenSSL operation failed")
+    return nil
+  end
+  return result.stdout
+end
+
 ---Generate a random PKCE verifier
 ---@return string|nil PKCE verifier
 M.pkce_verifier = function()
-  local err_msg = "Failure to generate PKCE verifier: "
-
-  local output_file = os.tmpname()
-  local cmd = ("%s rand -out %s 32"):format(openssl_path(), output_file)
-
-  local ret = os.execute(cmd)
-  if not ret then return Logger.error(err_msg .. "failed to generate random bytes") end
-
-  local verifier = Fs.read_file(output_file, true)
-  os.remove(output_file)
-
-  if not verifier then return Logger.error(err_msg .. "failed to read random bytes") end
-
-  return M.base64_encode(verifier)
+  local verifier = openssl { "rand", "32" }
+  return verifier and M.base64_encode(verifier)
 end
 
 ---Generate a PKCE challenge from the verifier
@@ -53,30 +53,8 @@ M.pkce_challenge = function(verifier, method)
   if method == "Plain" then return verifier end
   if method:lower() ~= "s256" then return Logger.error("Unsupported PKCE method: " .. method) end
 
-  local err_msg = "Failure to generate PKCE challenge: "
-
-  local input_file = os.tmpname()
-  if not Fs.write_file(input_file, verifier, true) then return Logger.error(err_msg .. "failed to open temp file") end
-
-  local output_file = os.tmpname()
-  local cmd = ("%s dgst -sha256 -binary -out %s %s"):format(openssl_path(), output_file, input_file)
-
-  local ret = os.execute(cmd)
-  if not ret then
-    os.remove(input_file)
-    return Logger.error(err_msg .. "failed to generate SHA256 hash")
-  end
-
-  local hash = Fs.read_file(output_file, true)
-  if not hash then
-    os.remove(input_file)
-    return Logger.error(err_msg .. "failed to open hash output file")
-  end
-
-  os.remove(input_file)
-  os.remove(output_file)
-
-  return M.base64_encode(hash)
+  local hash = openssl({ "dgst", "-sha256", "-binary" }, verifier)
+  return hash and M.base64_encode(hash)
 end
 
 ---@class JWTPayload
@@ -99,51 +77,27 @@ M.jwt_encode = function(header, payload, key)
   if not vim.tbl_contains(supported_alg, header.alg) then
     return Logger.error("Unsupported Algorithm: " .. header.alg)
   end
-  local method = header.alg == "RS256" and "sign" or "hmac"
 
   -- Base64url encode the header and payload
-  local header_b64 = M.base64_encode(Json.encode(header, { sort = true }):gsub("%s+", ""))
-  local payload_b64 = M.base64_encode(Json.encode(payload, { sort = true }):gsub("%s+", ""))
+  local header_b64 = M.base64_encode(Json.encode(header, { sort = true }))
+  local payload_b64 = M.base64_encode(Json.encode(payload, { sort = true }))
 
-  -- Save the signing input to a temp file
   local signing_input = header_b64 .. "." .. payload_b64
-  local input_file = os.tmpname()
-
-  if not Fs.write_file(input_file, signing_input, false, true) then
-    return Logger.error(err_msg .. "failed to open temp file")
+  local signature
+  if header.alg == "HS256" then
+    -- An argv array prevents shell expansion of untrusted key characters.
+    signature = openssl({ "dgst", "-sha256", "-hmac", key, "-binary" }, signing_input)
+  else
+    local key_file = vim.fn.tempname()
+    local fd = vim.uv.fs_open(key_file, "wx", 384) -- owner read/write only
+    if not fd then return Logger.error(err_msg .. "failed to create private temporary file") end
+    local written = vim.uv.fs_write(fd, key)
+    vim.uv.fs_close(fd)
+    if written == #key then signature = openssl({ "dgst", "-sha256", "-sign", key_file, "-binary" }, signing_input) end
+    vim.uv.fs_unlink(key_file)
   end
 
-  -- Save the key to a temp file
-  local key_file = os.tmpname()
-  if not Fs.write_file(key_file, key, false, true) then
-    return Logger.error(err_msg .. "failed to write key temp file")
-  end
-
-  key_file = method == "sign" and key_file or '"' .. key .. '"'
-
-  -- Sign with OpenSSL
-  local signature_file = os.tmpname()
-  local cmd = ("%s dgst -sha256 -%s %s -binary -out %s %s"):format(
-    openssl_path(),
-    method,
-    key_file,
-    signature_file,
-    input_file
-  )
-
-  local ret = os.execute(cmd)
-  if not ret then return Logger.error(err_msg .. "failed to sign with OpenSSL") end
-
-  -- Read the signature
-  local signature = Fs.read_file(signature_file, true)
-  if not signature then return Logger.error(err_msg .. "failed to read signature") end
-
-  -- Clean up temp files
-  os.remove(input_file)
-  os.remove(key_file)
-  os.remove(signature_file)
-
-  if not signature then return Logger.error(err_msg .. "failed to read signature") end
+  if not signature then return end
 
   return signing_input .. "." .. M.base64_encode(signature)
 end

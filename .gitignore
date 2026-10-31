@@ -27,3 +27,5 @@ selene.toml
 neovim.yml
 .todo.md
 AGENTS.md
+# Local binaries and JavaScript bundles are never committed.
+.build/

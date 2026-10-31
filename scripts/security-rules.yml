@@ -1,0 +1,29 @@
+rules:
+  - id: lua-shell-execution
+    languages: [generic]
+    paths:
+      include: ["*.lua"]
+    message: Review shell execution; untrusted data must not reach a shell string.
+    severity: WARNING
+    pattern-regex: '(?:os\.execute|io\.popen)\s*\('
+  - id: lua-dynamic-code
+    languages: [generic]
+    paths:
+      include: ["*.lua"]
+    message: Review dynamic evaluation; request scripts and CLI configuration are trusted code, not sandboxed data.
+    severity: INFO
+    pattern-regex: '\b(?:load|loadstring|loadfile|dofile)\s*(?:\(|,)'
+  - id: lua-shell-command-flag
+    languages: [generic]
+    paths:
+      include: ["*.lua"]
+    message: Review explicit shell commands; retained only for the documented stdin-cmd request feature.
+    severity: WARNING
+    pattern-regex: 'table\.insert\(cmd,\s*"(?:-c|-Command)"\)'
+  - id: lua-package-install
+    languages: [generic]
+    paths:
+      include: ["*.lua"]
+    message: Runtime package installation is not allowed in this fork.
+    severity: ERROR
+    pattern-regex: '"(?:install|clean-install|ci)"\s*,\s*"--prefix"'

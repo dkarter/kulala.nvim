@@ -35,7 +35,7 @@ const FORM_PARAM_NAME_CHARS = /[a-zA-Z0-9_@.\[\]]/;
 const FORM_PARAM_EXCLUSIONS = /[^\s\n\r=&#<{\[\]\}\-:,]+/;
 
 module.exports = grammar({
-  name: "kulala_http",
+  name: "dkarter_kulala_http",
 
   extras: (_) => [],
   conflicts: ($) => [[$.target_url], [$._section_content], [$.value]],

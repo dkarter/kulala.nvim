@@ -22,11 +22,14 @@ export const getObjectValueByPath = function (
     return undefined;
   }
   const pathParts = path.split(".");
+  if (pathParts.some((part) => ["__proto__", "prototype", "constructor"].includes(part))) {
+    return undefined;
+  }
   let current: unknown = obj;
   for (const part of pathParts) {
     if (
       current !== undefined && current !== null &&
-      typeof current === "object" && part in current
+      typeof current === "object" && Object.prototype.hasOwnProperty.call(current, part)
     ) {
       current = (current as Record<string, unknown>)[part];
     } else {
@@ -61,6 +64,9 @@ export const setObjectValueByPath = function (
     return currentObj;
   }
   const pathParts = path.split(".");
+  if (pathParts.some((part) => ["__proto__", "prototype", "constructor"].includes(part))) {
+    throw new Error("Unsafe variable path");
+  }
   const newObj: Record<string, unknown> = { ...currentObj };
   let tempObj: Record<string, unknown> = newObj;
   for (let i = ZERO_INDEX; i < pathParts.length; i++) {
@@ -69,7 +75,7 @@ export const setObjectValueByPath = function (
       tempObj[part] = value;
     } else {
       if (
-        !(part in tempObj) || typeof tempObj[part] !== "object" ||
+        !Object.prototype.hasOwnProperty.call(tempObj, part) || typeof tempObj[part] !== "object" ||
         tempObj[part] === null
       ) {
         tempObj[part] = {};

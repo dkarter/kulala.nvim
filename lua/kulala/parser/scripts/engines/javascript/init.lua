@@ -1,103 +1,40 @@
-local Async = require("kulala.utils.async")
+local Build = require("kulala.build")
 local CONFIG = require("kulala.config")
-local DB = require("kulala.db")
 local FS = require("kulala.utils.fs")
-local Float = require("kulala.ui.float")
 local GLOBALS = require("kulala.globals")
 local Logger = require("kulala.logger")
-local Shell = require("kulala.cmd.shell_utils")
 
 local M = {}
 
-local NPM_EXISTS = vim.fn.executable("npm") == 1
 local NODE_EXISTS = vim.fn.executable("node") == 1
 
-local NPM_BIN = vim.fn.exepath("npm")
 local NODE_BIN = vim.fn.exepath("node")
 
-local SCRIPTS_DIR = FS.get_scripts_dir()
 local REQUEST_SCRIPTS_DIR = FS.get_request_scripts_dir()
-local SCRIPTS_BUILD_DIR = FS.get_tmp_scripts_build_dir()
+local SCRIPTS_BUILD_DIR = Build.dir .. "/scripts"
 
-local BASE_DIR = FS.join_paths(SCRIPTS_DIR, "engines", "javascript", "lib")
-local BASE_FILE_PRE_CLIENT_ONLY = FS.join_paths(SCRIPTS_BUILD_DIR, "dist", "pre_request_client_only.js")
-local BASE_FILE_PRE = FS.join_paths(SCRIPTS_BUILD_DIR, "dist", "pre_request.js")
-local BASE_FILE_POST_CLIENT_ONLY = FS.join_paths(SCRIPTS_BUILD_DIR, "dist", "post_request_client_only.js")
-local BASE_FILE_POST = FS.join_paths(SCRIPTS_BUILD_DIR, "dist", "post_request.js")
+local BASE_FILE_PRE = FS.join_paths(SCRIPTS_BUILD_DIR, "pre_request.js")
+local BASE_FILE_POST = FS.join_paths(SCRIPTS_BUILD_DIR, "post_request.js")
 
 local FILE_MAPPING = {
-  pre_request_client_only = BASE_FILE_PRE_CLIENT_ONLY,
+  pre_request_client_only = BASE_FILE_PRE,
   pre_request = BASE_FILE_PRE,
-  post_request_client_only = BASE_FILE_POST_CLIENT_ONLY,
+  post_request_client_only = BASE_FILE_POST,
   post_request = BASE_FILE_POST,
 }
 
-local function get_build_ver()
-  local package = FS.read_json(BASE_DIR .. "/package.json")
-  return package and package.version or ""
-end
-
-local is_uptodate = function()
-  DB.session.js_build_ver_repo = DB.session.js_build_ver_repo or get_build_ver()
-
-  return DB.settings.js_build_ver_local == DB.session.js_build_ver_repo
+---@param wait boolean|nil -- wait to complete
+M.install_dependencies = function(_)
+  if
+    FS.read_file(Build.scripts_ready) == "ready\n"
     and FS.file_exists(BASE_FILE_PRE)
     and FS.file_exists(BASE_FILE_POST)
-end
-
----@param wait boolean|nil -- wait to complete
-M.install_dependencies = function(wait)
-  if is_uptodate() then return true end
-  if vim.g.kulala_js_installing then return false end
-
-  local cmd = require("kulala.cmd")
-  vim.g.kulala_js_installing = true
-
-  Logger.info("Javascript dependencies not found or are out of date.")
-  local progress = Float.create_progress_float("Installing JS dependencies...")
-
-  _ = not wait and cmd.queue:pause()
-
-  local co, cmd_install, cmd_build
-  co = coroutine.create(function()
-    FS.copy_dir(BASE_DIR, SCRIPTS_BUILD_DIR)
-
-    cmd_install = Shell.run(
-      { NPM_BIN, "clean-install", "--prefix", SCRIPTS_BUILD_DIR },
-      { err_msg = "JS dependencies install failed: ", on_error = progress.hide },
-      function()
-        Async.co_resume(co)
-      end
-    )
-    Async.co_yield(co)
-
-    cmd_build = Shell.run(
-      { NPM_BIN, "run", "build", "--prefix", SCRIPTS_BUILD_DIR },
-      { err_msg = "JS dependencies build failed: ", on_error = progress.hide },
-      function()
-        Async.co_resume(co)
-      end
-    )
-    Async.co_yield(co)
-
-    Async.co_wrap(co, function()
-      DB.settings:write { js_build_ver_local = DB.session.js_build_ver_repo }
-      vim.g.kulala_js_installing = false
-    end)
-
-    progress.hide()
-    Logger.info("Javascript dependencies installed")
-
-    _ = not wait and cmd.queue:resume()
-  end)
-
-  Async.co_resume(co)
-
-  _ = wait and cmd_install and cmd_install:wait()
-  if not cmd_build then return false end
-
-  _ = wait and cmd_build:wait()
-
+  then
+    return true
+  end
+  Logger.error(
+    "JavaScript helpers not built. Install Bun and run the fork's scripts/build.lua; no npm install is needed."
+  )
   return false
 end
 
@@ -182,7 +119,6 @@ M.run = function(type, data)
 
   if scripts_is_empty(data) then return end
   if not NODE_EXISTS then return Logger.error("node not found, please install nodejs") end
-  if not NPM_EXISTS then return Logger.error("npm not found, please install nodejs") end
 
   if not M.install_dependencies() then return end
 

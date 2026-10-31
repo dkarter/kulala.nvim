@@ -617,7 +617,7 @@ M.format = function(buffer, params)
 
   if not params.range then add_request_separator(buf) end
 
-  local lang = "kulala_http"
+  local lang = "dkarter_kulala_http"
 
   local ok, parser = pcall(ts.get_parser, buf, lang)
   if not ok or not parser then return end

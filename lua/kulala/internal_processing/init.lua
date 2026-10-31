@@ -155,14 +155,17 @@ local function format_json_response(fp)
   local formatter = CONFIG.get().contenttypes["application/json"].formatter
   if not formatter then return end
 
-  local cmd = { "sh", "-c", table.concat(formatter, " ") .. " '" .. GLOBALS.BODY_FILE .. "' " .. " > '" .. fp .. "'" }
-
-  Shell.run(cmd, {
-    err_msg = "Failed to format json while redirecting to " .. fp,
-    abort_on_stderr = true,
-  }, function()
-    Logger.info("Formatted JSON response in: " .. fp)
-  end)
+  Shell.run(
+    formatter,
+    {
+      stdin = FS.read_file(GLOBALS.BODY_FILE),
+      err_msg = "Failed to format json while redirecting to " .. fp,
+      abort_on_stderr = true,
+    },
+    vim.schedule_wrap(function(result)
+      if FS.write_file(fp, result.stdout) then Logger.info("Formatted JSON response in: " .. fp) end
+    end)
+  )
 end
 
 M.redirect_response_body_to_file = function(data)

@@ -1,3 +1,47 @@
+# Kulala v5 compatibility fork
+
+This is Dorian Karter's source fork of **v5.3.4** (`6656c9d332735ca6a27725e0fb45a1715c4372d9`),
+the last release before kulala-core. Compatibility and security fixes only.
+It does not use Core, a license service, or upstream release binaries.
+Upstream history, the MIT license, and attribution are retained.
+
+## Install this fork
+
+Install Neovim 0.10+, cURL, a C compiler, and tree-sitter-cli through trusted sources.
+For JavaScript request scripts, also install Bun (build time) and Node.js (runtime).
+No npm install is needed. The LSP is Lua code inside Neovim, not an external executable.
+
+```lua
+{
+  "dkarter/kulala.nvim",
+  name = "kulala-v5.nvim",
+  branch = "main",
+  submodules = false,
+  build = "scripts/build.lua",
+  ft = { "http", "rest" },
+  opts = { global_keymaps = true },
+}
+```
+
+The build regenerates the parser C code from the bundled grammar, compiles it locally,
+and builds the optional JavaScript helpers from TypeScript. Outputs stay in `.build/`.
+The plugin loads that parser by its exact path, not from an existing shared parser cache.
+Rebuild after updates; restart Neovim to replace an already-loaded native parser.
+
+The separate **kulala-fmt executable and Postman/OpenAPI/Bruno converter are excluded**.
+The built-in Lua formatter and LSP remain. JavaScript helpers no longer auto-install
+npm dependencies. Diagnostics stay local and do not collect request/config snapshots.
+Caches and state use the `dkarter-kulala-v5` namespace, separate from upstream.
+
+Only execute `.http` files you trust: scripts, shell-command metadata, file includes,
+and response redirects can execute code or read/write files with your permissions.
+This fork is not a sandbox. See [SECURITY.md](SECURITY.md) for review scope and limitations.
+
+The original README follows as historical documentation. Its upstream install,
+formatter, badges, and service links do **not** describe this fork.
+
+---
+
 <div align="center">
 
 ![Kulala Logo](logo.svg)

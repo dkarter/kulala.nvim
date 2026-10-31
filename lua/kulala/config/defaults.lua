@@ -149,16 +149,16 @@ local M = {
     -- highlight groups for http syntax highlighting
     ---@type table<string, string|vim.api.keyset.highlight>
     syntax_hl = {
-      ["@punctuation.bracket.kulala_http"] = "Number",
-      ["@character.special.kulala_http"] = "Special",
-      ["@operator.kulala_http"] = "Special",
-      ["@variable.kulala_http"] = "String",
-      ["@redirect_path.kulala_http"] = "Number",
-      ["@external_body_path.kulala_http"] = "String",
-      ["@query_param.name.kulala_http"] = "Number",
-      ["@query_param.value.kulala_http"] = "String",
-      ["@form_param_name.kulala_http"] = "Number",
-      ["@form_param_value.kulala_http"] = "String",
+      ["@punctuation.bracket.dkarter_kulala_http"] = "Number",
+      ["@character.special.dkarter_kulala_http"] = "Special",
+      ["@operator.dkarter_kulala_http"] = "Special",
+      ["@variable.dkarter_kulala_http"] = "String",
+      ["@redirect_path.dkarter_kulala_http"] = "Number",
+      ["@external_body_path.dkarter_kulala_http"] = "String",
+      ["@query_param.name.dkarter_kulala_http"] = "Number",
+      ["@query_param.value.dkarter_kulala_http"] = "String",
+      ["@form_param_name.dkarter_kulala_http"] = "Number",
+      ["@form_param_value.dkarter_kulala_http"] = "String",
     },
 
     -- enable/disable request summary in the output window

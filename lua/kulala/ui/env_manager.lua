@@ -11,7 +11,7 @@ local Logger = require("kulala.logger")
 local M = {}
 
 local template = {
-  ["$schema"] = "https://raw.githubusercontent.com/mistweaverco/kulala.nvim/main/schemas/http-client.env.schema.json",
+  ["$schema"] = "https://raw.githubusercontent.com/dkarter/kulala.nvim/main/schemas/http-client.env.schema.json",
   ["$shared"] = {
     ["$default_headers"] = {},
   },

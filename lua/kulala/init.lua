@@ -37,7 +37,7 @@ M.inspect = function()
 end
 
 M.open_cookies_jar = function()
-  vim.cmd("edit " .. GLOBALS.COOKIES_JAR_FILE)
+  vim.cmd.edit(GLOBALS.COOKIES_JAR_FILE)
 end
 
 M.copy = function()
@@ -115,7 +115,7 @@ M.export = function(path)
   Export.export_requests(path)
 end
 
---- Generate a bug report and open a GitHub issue with it
+--- Open a local diagnostic without uploading it
 M.generate_bug_report = function()
   require("kulala.logger.bug_report").generate_bug_report()
 end

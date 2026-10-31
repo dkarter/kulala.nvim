@@ -11,7 +11,7 @@ local function get_diagnostics(bufnr, parser)
   local ok
 
   ok, parser = pcall(function()
-    return parser or ts.get_parser(bufnr, "kulala_http")
+    return parser or ts.get_parser(bufnr, "dkarter_kulala_http")
   end)
   if not ok or not parser then return diagnostics end
 
@@ -49,7 +49,7 @@ local function get_diagnostics(bufnr, parser)
 end
 
 local function update_diagnostics(bufnr)
-  local ok, parser = pcall(ts.get_parser, bufnr, "kulala_http")
+  local ok, parser = pcall(ts.get_parser, bufnr, "dkarter_kulala_http")
   if not ok then parser = nil end
 
   local existing_diags = vim.diagnostic.get(bufnr) or {}
