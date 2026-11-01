@@ -15,6 +15,7 @@ No npm install is needed. The LSP is Lua code inside Neovim, not an external exe
 {
   "dkarter/kulala.nvim",
   name = "kulala-v5.nvim",
+  main = "kulala",
   branch = "main",
   submodules = false,
   build = "scripts/build.lua",
